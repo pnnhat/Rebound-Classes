@@ -703,10 +703,10 @@ theme_cols = [
 ]
 theme_map = [
     "Understand/Clarify Concepts",
-    "Catch Up",
-    "Practice",
+    "Catch Up Content",
+    "Extra Practice",
     "Assessments Help",
-    "No Comments",
+    "Unanswered",
 ]
 theme_colors = ["#6baed6", "#9ecae1", "#74c476", "#bcbddc", "#fdd0a2"]
 
@@ -875,7 +875,7 @@ theme_map = [
     "Falling Behind",
     "Confidence/Anxiety-Related Motivation",
     "Other",
-    "No Comments",
+    "Unanswered",
 ]
 theme_colors = ["#6baed6", "#9ecae1", "#74c476", "#bcbddc", "#fdd0a2"]
 
@@ -1040,7 +1040,7 @@ theme_map = [
     "Learning Environment",
     "Learning Outcomes",
     "Suggestions for Improvement",
-    "No Comments",
+    "Unanswered",
 ]
 theme_colors = ["#6baed6", "#9ecae1", "#74c476", "#bcbddc", "#fdd0a2"]
 
@@ -1207,7 +1207,7 @@ theme_map = [
     "More Teaching Support",
     "Pace Adjustment",
     "Session Structure",
-    "No Comments",
+    "Unanswered",
 ]
 theme_colors = ["#6baed6", "#9ecae1", "#74c476", "#fdd0a2"]
 
