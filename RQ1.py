@@ -5,8 +5,8 @@ import seaborn as sns
 from scipy.stats import mannwhitneyu
 from matplotlib.patches import Patch
 
+
 df = pd.read_excel("EntrySurvey_JaydenUpdated.xlsx")
-df.head()
 
 df = df[df["Finished"] == True].copy()
 drop = [
@@ -136,7 +136,6 @@ df_challenge_final = df_challenge_final.rename(columns={"Challenge_List": "Chall
 df_challenge_final["Category"] = (
     df_challenge_final["Challenge"].map(challenge_map).fillna("Other")
 )
-
 
 ### Graph for overall
 
@@ -874,7 +873,7 @@ theme_map = [
     "Lack of Prior Background",
     "Falling Behind",
     "Confidence/Anxiety-Related Motivation",
-    "Other",
+    "Others",
     "Unanswered",
 ]
 theme_colors = ["#6baed6", "#9ecae1", "#74c476", "#bcbddc", "#fdd0a2"]

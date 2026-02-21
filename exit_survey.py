@@ -46,6 +46,7 @@ rename_map = {
     "On the scale of 1 to 5, rate your experience with the REBOUND classes - Ratiing for REBOUND Classes": "Rating REBOUND Classes",
     "How did Rebound classes help you with the unit?": "How Rebound Classes Helped",
     "What can we do to better the Rebound classes?": "Feedback",
+    "Please enter your StudentID": "StudentID",
 }
 
 df = df.rename(columns=rename_map)
@@ -105,6 +106,7 @@ df_1350_s2 = df_1350[
     (df_1350["Recorded Date"] >= "2025-07-01")
     & (df_1350["Recorded Date"] <= "2025-11-30")
 ]
+
 
 ### Graph for overall
 s1_comp1350 = len(df_1350_s1)
