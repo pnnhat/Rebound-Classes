@@ -106,6 +106,7 @@ df_1000 = df[df["Unit"] == "COMP1000- Introduction to Computer Programming"]
 df_1000_s1 = df_s1[df_s1["Unit"] == "COMP1000- Introduction to Computer Programming"]
 df_1000_s2 = df_s2[df_s2["Unit"] == "COMP1000- Introduction to Computer Programming"]
 
+
 ## Challenge faced mapping
 challenge_map = {
     "The content of the unit was overwhelming": "Unit Content",
@@ -584,6 +585,59 @@ for sess, unit, sub in subs:
 challenge_table = pd.DataFrame(rows)
 challenge_table
 
+
+# More specific code-level table
+challenge_code_map = {
+    "The content of the unit was overwhelming": "UCO1",
+    "The assessments were too difficult to attempt": "UCO2",
+    "I wish I had more time to complete the assessments": "UCO3",
+    "I couldn't understand the lecturer": "SO1",
+    "I couldn't understand the workshop instructor": "SO2",
+    "The staff weren't approachable": "SO3",
+    "It was my first semester, everything was overwhelming": "OFO1",
+    "I enrolled late and couldn't catch up with the contents of the unit": "OFO2",
+    "I didn't understand how to manage my time better": "OFO3",
+    "I had personal issues": "OFO4",
+}
+code_order = [
+    "UCO1",
+    "UCO2",
+    "UCO3",
+    "SO1",
+    "SO2",
+    "SO3",
+    "OFO1",
+    "OFO2",
+    "OFO3",
+    "OFO4",
+]
+
+tmp = df_challenge_final.copy()
+
+tmp["Challenge Code"] = tmp["Challenge"].map(challenge_code_map)
+tmp = tmp[~tmp["Challenge Code"].isna()].copy()
+
+
+def count_codes(sub):
+    return sub["Challenge Code"].value_counts().reindex(code_order, fill_value=0)
+
+
+subs = [
+    ("Semester 1", "C1", session_1(tmp[tmp["Unit"] == u1000])),
+    ("Semester 1", "C2", session_1(tmp[tmp["Unit"] == u1350])),
+    ("Semester 2", "C1", session_2(tmp[tmp["Unit"] == u1000])),
+    ("Semester 2", "C2", session_2(tmp[tmp["Unit"] == u1350])),
+]
+
+out = pd.DataFrame({"Challenge Code": code_order})
+
+for sem, col, sub in subs:
+    out[f"{sem} {col}"] = count_codes(sub).values
+
+challenge_code_table = out
+challenge_code_table
+
+
 ## Build confidence table
 confidence_levels = {
     1: "Not Confident (n)",
@@ -672,6 +726,7 @@ thoughts_table = build_thoughts_table(df)
 thoughts_table
 
 ## Expectations graph
+# overall
 df_expect = pd.read_excel("entry_survey_cleaned.xlsx", sheet_name="Expectation Theme")
 
 df_expect.columns = (
@@ -692,6 +747,130 @@ df_1000_s1 = df_s1[df_s1["Unit"] == u1000]
 df_1350_s1 = df_s1[df_s1["Unit"] == u1350]
 df_1000_s2 = df_s2[df_s2["Unit"] == u1000]
 df_1350_s2 = df_s2[df_s2["Unit"] == u1350]
+
+theme_cols = [f"Expectation Theme {i}" for i in range(1, 16)]
+themes15 = [
+    "Understand Concepts",
+    "Catch Up Content",
+    "No Comment",
+    "Extra Practice",
+    "Unwell",
+    "To be more confident",
+    "Exams",
+    "Slower pace learning",
+    "Recap",
+    "Random",
+    "Late enrolment",
+    "Revise",
+    "Missed lessons",
+    "New to IT",
+    "Receive Feedback",
+]
+
+
+def normalize_theme_cell(x):
+    if pd.isna(x):
+        return pd.NA
+    s = str(x).strip()
+    if s == "" or s == "0":
+        return pd.NA
+    return s
+
+
+tmp = df_expect.copy()
+for c in theme_cols:
+    if c not in tmp.columns:
+        tmp[c] = pd.NA
+    tmp[c] = tmp[c].map(normalize_theme_cell)
+
+counts15 = np.array(
+    [int((tmp[theme_cols] == t).sum().sum()) for t in themes15], dtype=int
+)
+
+plt.figure(figsize=(14, 6))
+x = np.arange(len(themes15))
+bars = plt.bar(x, counts15)
+
+plt.xticks(x, themes15, rotation=45, ha="right")
+plt.ylabel("Count")
+plt.xlabel("Expectation Theme")
+
+for b in bars:
+    h = b.get_height()
+    if h > 0:
+        plt.text(
+            b.get_x() + b.get_width() / 2,
+            h + 0.1,
+            f"{int(h)}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+
+plt.tight_layout()
+plt.show()
+
+
+# per session
+counts_s1 = [int((df_s1[theme_cols] == t).sum().sum()) for t in themes15]
+counts_s2 = [int((df_s2[theme_cols] == t).sum().sum()) for t in themes15]
+
+heat_data = pd.DataFrame(
+    [counts_s1, counts_s2],
+    index=["S1", "S2"],
+    columns=themes15,
+)
+plt.figure(figsize=(16, 4))
+sns.heatmap(
+    heat_data,
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    linewidths=0.5,
+    cbar_kws={"label": "Count"},
+)
+
+plt.xticks(rotation=45, ha="right")
+plt.tight_layout()
+plt.show()
+
+# per session and unit
+groups = [
+    ("C1", "S1", df_s1[df_s1["Unit"] == u1000]),
+    ("C1", "S2", df_s2[df_s2["Unit"] == u1000]),
+    ("C2", "S1", df_s1[df_s1["Unit"] == u1350]),
+    ("C2", "S2", df_s2[df_s2["Unit"] == u1350]),
+]
+data = []
+row_labels = []
+for unit, sess, g in groups:
+    counts = [int((g[theme_cols] == t).sum().sum()) for t in themes15]
+    data.append(counts)
+    row_labels.append(sess)
+
+heat_df = pd.DataFrame(data, index=row_labels, columns=themes15)
+
+fig, ax = plt.subplots(figsize=(18, 6))
+sns.heatmap(
+    heat_df,
+    annot=True,
+    fmt="d",
+    cmap="Reds",
+    linewidths=0.5,
+    cbar_kws={"label": "Count"},
+    ax=ax,
+)
+
+ax.set_ylabel("")
+ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+ax.set_yticklabels(row_labels, rotation=0)
+ax.text(-0.6, 1.0, "C1", ha="right", va="center", fontsize=12, transform=ax.transData)
+ax.text(-0.6, 3.0, "C2", ha="right", va="center", fontsize=12, transform=ax.transData)
+
+
+plt.tight_layout()
+plt.show()
+
 
 theme_cols = [
     "Expectation Theme 1",

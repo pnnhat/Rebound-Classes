@@ -333,4 +333,3 @@ for c in thought_exit_cols:
                 1: "Not helpful at all",
             }
         )
-triangulated.to_excel("linked_data.xlsx", index=False)

@@ -1,147 +1,125 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy.stats import mannwhitneyu
 from scipy.stats import spearmanr
 
-df = pd.read_excel("EntrySurvey_JaydenUpdated.xlsx")
-df.head()
+df = pd.read_excel("RQ2.xlsx")
 
-drop = [
-    "Start Date",
-    "End Date",
-    "Response Type",
-    "IP Address",
-    "Duration (in seconds)",
-    "Recipient Last Name",
-    "Recipient First Name",
-    "Recipient Email",
-    "External Data Reference",
-    "Location Latitude",
-    "Location Longitude",
-    "Distribution Channel",
-    "User Language",
-    "Do you wish to be notified via email, once the results of the survey has been processed at the end of the data collection?",
+df_unique = df.drop_duplicates(subset=["Participant ID", "Semester"])
+df = df_unique.copy()
+df["Score"] = pd.to_numeric(df["Score"], errors="coerce")
+df["Confidence Combined"] = df[
+    ["Confidence Unit Content", "Confidence Assessments"]
+].mean(axis=1)
+
+
+def build_summary(data, label):
+    if len(data) < 3:
+        return None
+
+    rho_unit, p_unit = spearmanr(data["Confidence Unit Content"], data["Score"])
+    rho_assess, p_assess = spearmanr(data["Confidence Assessments"], data["Score"])
+    rho_combined, p_combined = spearmanr(data["Confidence Combined"], data["Score"])
+
+    rho_content, p_content = spearmanr(
+        data["Helpfulness Content Covered"], data["Score"]
+    )
+    rho_fac, p_fac = spearmanr(data["Helpfulness Facilitator"], data["Score"])
+    rho_struct, p_struct = spearmanr(
+        data["Helpfulness Structure of the Classes"], data["Score"]
+    )
+    rho_help_combined, p_help_combined = spearmanr(
+        data[
+            [
+                "Helpfulness Content Covered",
+                "Helpfulness Facilitator",
+                "Helpfulness Structure of the Classes",
+            ]
+        ].mean(axis=1),
+        data["Score"],
+    )
+
+    return {
+        "Group": label,
+        "n": len(data),
+        "Mean Score": round(data["Score"].mean(), 1),
+        "SD Score": round(data["Score"].std(), 1),
+        "Median Score": round(data["Score"].median(), 1),
+        "Spearman ρ (Confidence - Unit Content)": round(rho_unit, 3),
+        "p-value (Confidence - Unit Content)": round(p_unit, 4),
+        "Spearman ρ (Confidence - Assessments)": round(rho_assess, 3),
+        "p-value (Confidence - Assessments)": round(p_assess, 4),
+        "Spearman ρ (Confidence - Combined)": round(rho_combined, 3),
+        "p-value (Confidence - Combined)": round(p_combined, 4),
+        "Spearman ρ (Helpfulness - Content Covered)": round(rho_content, 3),
+        "p-value (Helpfulness - Content Covered)": round(p_content, 4),
+        "Spearman ρ (Helpfulness - Facilitator)": round(rho_fac, 3),
+        "p-value (Helpfulness - Facilitator)": round(p_fac, 4),
+        "Spearman ρ (Helpfulness - Structure of the Classes)": round(rho_struct, 3),
+        "p-value (Helpfulness - Structure of the Classes)": round(p_struct, 4),
+        "Spearman ρ (Helpfulness - Combined)": round(rho_help_combined, 3),
+        "p-value (Helpfulness - Combined)": round(p_help_combined, 4),
+    }
+
+
+rows = []
+
+rows.append(build_summary(df, "Overall"))
+for unit in ["C1", "C2"]:
+    subset = df[df["C1/C2"] == unit]
+    rows.append(build_summary(subset, unit))
+
+for sem in ["S1", "S2"]:
+    subset = df[df["Semester"] == sem]
+    rows.append(build_summary(subset, sem))
+order = [
+    ("C1", "S1"),
+    ("C2", "S1"),
+    ("C1", "S2"),
+    ("C2", "S2"),
 ]
 
-consent_col = [
-    c for c in df.columns if c.startswith("Welcome to the REBOUND research study!")
-][0]
+for unit, sem in order:
+    subset = df[(df["C1/C2"] == unit) & (df["Semester"] == sem)]
+    if len(subset) > 2:
+        rows.append(build_summary(subset, f"{unit} {sem}"))
 
-df = df[
-    (df[consent_col] != "I do not consent, I do not wish to participate")
-    & (~df[consent_col].isna())
+big_table = pd.DataFrame([r for r in rows if r is not None])
+big_table
+
+confidence_cols = [
+    "Group",
+    "n",
+    "Mean Score",
+    "SD Score",
+    "Median Score",
+    "Spearman ρ (Confidence - Unit Content)",
+    "p-value (Confidence - Unit Content)",
+    "Spearman ρ (Confidence - Assessments)",
+    "p-value (Confidence - Assessments)",
+    "Spearman ρ (Confidence - Combined)",
+    "p-value (Confidence - Combined)",
 ]
 
-for col in df.columns:
-    if col.startswith("Welcome to the REBOUND research study!"):
-        drop.append(col)
-df = df.drop(columns=drop, errors="ignore")
+confidence_table = big_table[confidence_cols]
 
+confidence_table.to_excel("RQ2_Confidence.xlsx", index=False)
 
-#! Is there evidence that students who perceive REBOUND as more helpful tend to
-# achieve more academic outcomes compared to those who perceive it as less helpful?
-score_df = pd.read_excel("REBOUND Score.xlsx")
-score_df.head()
-score = "Score"
-
-survey_cols = [
-    "Response ID",
-    "Unit",
-    "Thoughts Content Covered",
-    "Thoughts Facilitator",
-    "Thoughts Structure of the Classes",
-    "Confidence Unit Content",
-    "Confidence Assessments",
-    "Repeating Student",
+helpfulness_cols = [
+    "Group",
+    "n",
+    "Mean Score",
+    "SD Score",
+    "Median Score",
+    "Spearman ρ (Helpfulness - Content Covered)",
+    "p-value (Helpfulness - Content Covered)",
+    "Spearman ρ (Helpfulness - Facilitator)",
+    "p-value (Helpfulness - Facilitator)",
+    "Spearman ρ (Helpfulness - Structure of the Classes)",
+    "p-value (Helpfulness - Structure of the Classes)",
+    "Spearman ρ (Helpfulness - Combined)",
+    "p-value (Helpfulness - Combined)",
 ]
 
-survey_df = df[survey_cols].copy()
-merged = pd.merge(
-    survey_df, score_df[["Response ID", score]], on="Response ID", how="inner"
-)
+helpfulness_table = big_table[helpfulness_cols]
 
-# Change to other components if needed (Jayden was lazy sorry)
-merged["High"] = merged["Confidence Unit Content"] >= 3
-
-merged_1000 = merged[merged["Unit"] == "COMP1000- Introduction to Computer Programming"]
-
-merged_1350 = merged[
-    merged["Unit"] == "COMP1350 - Introduction to Database Design and Management"
-]
-
-
-low_1000 = merged_1000.loc[~merged_1000["High"], "Score"].dropna()
-high_1000 = merged_1000.loc[merged_1000["High"], "Score"].dropna()
-
-u_1000, p_1000 = mannwhitneyu(low_1000, high_1000, alternative="two-sided")
-
-print("COMP1000 Confidence Unit Content")
-print(f"Low N = {len(low_1000)}, High N = {len(high_1000)}")
-print(f"U statistic = {u_1000:.2f}, p-value = {p_1000:.4f}")
-
-low_1350 = merged_1350.loc[~merged_1350["High"], "Score"].dropna()
-high_1350 = merged_1350.loc[merged_1350["High"], "Score"].dropna()
-
-u_1350, p_1350 = mannwhitneyu(low_1350, high_1350, alternative="two-sided")
-
-print("COMP1350 Confidence Unit Content")
-print(f"Low N = {len(low_1350)}, High N = {len(high_1350)}")
-print(f"U statistic = {u_1350:.2f}, p-value = {p_1350:.4f}")
-
-
-def rank(u, n1, n2):
-    return 1 - (2 * u) / (n1 * n2)
-
-
-r_1000 = rank(u_1000, len(low_1000), len(high_1000))
-r_1350 = rank(u_1350, len(low_1350), len(high_1350))
-
-print("Effect sizes")
-print(f"COMP1000: r = {r_1000:.3f}")
-print(f"COMP1350: r = {r_1350:.3f}")
-
-
-data_1000 = merged[
-    merged["Unit"] == "COMP1000- Introduction to Computer Programming"
-].dropna(subset=["Confidence Unit Content", "Score"])
-plt.figure(figsize=(6, 4))
-sns.regplot(
-    data=data_1000,
-    x="Confidence Unit Content",
-    y="Score",
-    scatter_kws={"alpha": 0.6},
-    line_kws={"linestyle": "--"},
-)
-plt.title("COMP1000: Confidence Unit Content vs Final Score")
-plt.xlabel("Confidence Unit Content")
-plt.ylabel("Final Score")
-plt.xticks([1, 2, 3, 4])
-plt.tight_layout()
-plt.show()
-
-
-data_1350 = merged[
-    merged["Unit"] == "COMP1350 - Introduction to Database Design and Management"
-].dropna(subset=["Confidence Unit Content", "Score"])
-
-plt.figure(figsize=(6, 4))
-sns.regplot(
-    data=data_1350,
-    x="Confidence Unit Content",
-    y="Score",
-    scatter_kws={"alpha": 0.6},
-    line_kws={"linestyle": "--"},
-    lowess=True,
-)
-
-plt.title("COMP1350: Confidence Unit Content vs Final Score")
-plt.xlabel("Confidence Unit Content")
-plt.ylabel("Final Score")
-plt.xticks([1, 2, 3, 4])
-plt.tight_layout()
-plt.show()
-
-
-## capture 1st gen family and repeating student
+helpfulness_table.to_excel("RQ2_Helpfulness.xlsx", index=False)
