@@ -2,12 +2,11 @@ import pandas as pd
 import numpy as np
 from scipy.stats import ttest_ind
 import statsmodels.formula.api as smf
+from statsmodels.stats.anova import anova_lm
 
 df = pd.read_excel("RQ4.xlsx")
 
-
 df["Score"] = pd.to_numeric(df["Score"], errors="coerce")
-
 
 df["Reason for Attendance"] = df["Reason for Attendance"].fillna("")
 
@@ -39,10 +38,9 @@ def run_ttests(data, label="Overall"):
 
             results.append(
                 {
-                    "Group": label,
                     "Theme": theme,
-                    "Mean (Selected)": round(group1.mean(), 2),
-                    "Mean (Not Selected)": round(group0.mean(), 2),
+                    "Mean (Selected)": round(group1.mean(), 1),
+                    "Mean (Not Selected)": round(group0.mean(), 1),
                     "n Selected": len(group1),
                     "n Not Selected": len(group0),
                     "t-stat": round(t_stat, 3),
@@ -92,7 +90,26 @@ unit_sem_results
 
 df["C1/C2"] = df["C1/C2"].astype("category")
 df["Semester"] = df["Semester"].astype("category")
+
 formula = """
+Score ~ Q("Understand Concepts") 
+       + Q("Catch-up on Content") 
+       + Q("Extra Practice")
+       + Q("Assessments Help")
+       + Q("Missed Lesson")
+       + Q("For Confidence")
+       + Q("Slow-paced Learning")
+       + Q("New to Computing")
+       + C(Q("C1/C2"))
+       + C(Q("Semester"))
+"""
+
+model = smf.ols(formula=formula, data=df).fit()
+print("OLS with Controls")
+print(model.summary())
+
+
+formula_simple = """
 Score ~ Q("Understand Concepts") 
        + Q("Catch-up on Content") 
        + Q("Extra Practice")
@@ -103,6 +120,12 @@ Score ~ Q("Understand Concepts")
        + Q("New to Computing")
 """
 
-model = smf.ols(formula=formula, data=df).fit()
+model_simple = smf.ols(formula=formula_simple, data=df).fit()
+print("\nOLS without Controls")
+print(model_simple.summary())
+# Compare the two models
 
-print(model.summary())
+
+print("\nPartial F-test comparing models with and without controls:")
+anova_results = anova_lm(model_simple, model)
+print(anova_results)
